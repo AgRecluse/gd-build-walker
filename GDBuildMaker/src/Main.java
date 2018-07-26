@@ -120,24 +120,5 @@ public class Main {
 		
 		BuildWalker bw = new BuildWalker();
 		bw.walkBuilds(sortedConstellations, constellationValues, starValues);
-		
-//		List<Constellation> smallStellas = new ArrayList<Constellation>();
-//		List<Double> smallValues = new ArrayList<Double>();
-//		for (Constellation c : constellations) {
-//			if (c.getRequirement().total() <= 0) {
-//				c.ordinal = smallStellas.size();
-//				smallStellas.add(c);
-//				smallValues.add((double)(c.ordinal));
-//			}
-//		}
-//		final Map<Star, Double> smallStarValues = new HashMap<Star, Double>();
-//		for (Constellation c : smallStellas) {
-//			for (Star s : c.getStars()) {
-//				smallStarValues.put(s, (double)(c.ordinal));
-//			}
-//		}
-//		System.out.println(smallStellas.size() + " constellations");
-//		BuildWalker bw = new BuildWalker();
-//		bw.walkBuilds(smallStellas, smallValues, smallStarValues);
 	}
 }
