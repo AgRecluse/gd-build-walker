@@ -17,9 +17,9 @@ public class Main {
 		for(Star star : constellation.getStars()) {
 			value += starValue(star, constellation);
 		}
-		value += constellation.getReward(Affinity.ASCENDANT);
-		value += constellation.getReward(Affinity.PRIMORDIAL);
-		value += constellation.getReward(Affinity.CHAOS);
+//		value += constellation.getReward(Affinity.ASCENDANT);
+//		value += constellation.getReward(Affinity.PRIMORDIAL);
+//		value += constellation.getReward(Affinity.CHAOS);
 		return value;
 	}
 	
