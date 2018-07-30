@@ -1,13 +1,13 @@
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.Stack;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BuildWalker {
 	private static final class BuildBytes {
@@ -44,11 +44,26 @@ public class BuildWalker {
 		}
 	}
 	
-	// Constellation/Star data that more methods need
-	private List<Constellation> sortedConstellations;
+	// Shared resources
+	private static List<Constellation> sortedConstellations;
+	private static List<Double> constellationValues;
+	private static Set<BuildBytes> visitedBuilds;
+	
+	public static void setup(List<Constellation> sortedConstellations,
+			List<Double> constellationValues, Map<Star, Double> starValues) {
+		BuildWalker.sortedConstellations = sortedConstellations;
+		BuildWalker.constellationValues = constellationValues;
+		
+		BuildFinisher.setup(sortedConstellations, starValues);
+		
+		visitedBuilds = ConcurrentHashMap.newKeySet();
+	}
+	
+	public static int totalBuilds() {
+		return visitedBuilds.size();
+	}
 	
 	private BuildFinisher buildFinisher;
-	private TopBuilds topBuilds;
 	
 	// Build variables represent the state of the build at each step in the walk
 	private SortedSet<Constellation> build;
@@ -57,52 +72,31 @@ public class BuildWalker {
 	private AffinityValues buildAffinities;
 	
 	// Options for the next step in the walk
-	Stack<Constellation> options; 
+	Stack<Constellation> options;
+	
+	// The history of choices the walk has taken to get to the current step
+	Stack<Constellation> path;
 	
 	public BuildWalker() {
-	}
-	
-	public void walkBuilds(
-			List<Constellation> sortedConstellations,
-			List<Double> constellationValues,
-			Map<Star, Double> starValues) {
-		
-		this.sortedConstellations = sortedConstellations;
-		
-		buildFinisher = new BuildFinisher(sortedConstellations, starValues);
-		topBuilds = new TopBuilds(Main.TOP_BUILDS);
+		buildFinisher = new BuildFinisher();
 		
 		build = new TreeSet<Constellation>(new Comparator<Constellation>() {
 			public int compare(Constellation c1, Constellation c2) {
 				return c1.getOrdinal() - c2.getOrdinal();
 			}
 		});
+
 		buildStars = 0;
 		buildValue = 0.0;
 		buildAffinities = new AffinityValues();
 		
-		// All builds visited
-		Set<BuildBytes> visitedBuilds = new HashSet<BuildBytes>();
-		
-		// The history of choices the walk has taken to get to the current step
-		Stack<Constellation> path = new Stack<Constellation>();
-
 		options = new Stack<Constellation>();
+		path = new Stack<Constellation>();
+	}
+	
+	public void walkBuilds() {
 		pickOptions();
-		
-		long lastPrint = 0;
-		int lastVBSize = 0;
-		long printTimer = 3000;
 		while (options.size() > 0 || path.size() > 0) {
-			// TODO: Print better? Find some better way/place to report results.
-			if (lastPrint + printTimer < System.currentTimeMillis()) {
-				System.out.println(String.format("Working: %.2f-%s", buildValue, build));
-				System.out.println("Total builds: " + visitedBuilds.size());
-				System.out.println("New builds: " + (visitedBuilds.size()-lastVBSize));
-				System.out.println(topBuilds.buildsString());
-				lastPrint = System.currentTimeMillis();
-				lastVBSize = visitedBuilds.size();
-			}
 			
 			// If the options for this step are empty, return to the previous step
 			if (options.size() == 0) {
@@ -148,7 +142,8 @@ public class BuildWalker {
 								buildFinisher.bestPartialBuild(build, buildStars, buildAffinities);
 						
 						// Give the finished build to TopBuilds
-						topBuilds.submit(build, partial.getPartials(), buildValue + partial.getValue());
+						TopBuilds.getInstance().submit(
+								build, partial.getPartials(), buildValue + partial.getValue());
 					}
 					// If the build is not valid or has been visited, roll back changes
 					else {
@@ -174,7 +169,8 @@ public class BuildWalker {
 								buildFinisher.bestPartialBuild(build, buildStars, buildAffinities);
 						
 						// Give the finished build to TopBuilds
-						topBuilds.submit(build, partial.getPartials(), buildValue + partial.getValue());
+						TopBuilds.getInstance().submit(
+								build, partial.getPartials(), buildValue + partial.getValue());
 					}
 					// If the build has been visited, roll back changes
 					else {
@@ -193,8 +189,6 @@ public class BuildWalker {
 	 * WARNING: For removals, pickOptions() does NOT check if the resulting
 	 *  build will be valid.
 	 * Uses: sortedConstellations, build, buildStars, buildAffinities, options
-	 * 
-	 * @return void
 	 */
 	private void pickOptions() {
 		options.clear();
@@ -216,7 +210,7 @@ public class BuildWalker {
 		}
 	}
 	
-	private static boolean allAvailable(Iterable<Constellation> constellations, AffinityValues av) {
+	private boolean allAvailable(Iterable<Constellation> constellations, AffinityValues av) {
 		for (Constellation c : constellations) {
 			if (!(c.isAvailableWith(av))) return false;
 		}

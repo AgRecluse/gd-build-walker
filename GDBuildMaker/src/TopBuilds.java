@@ -5,9 +5,13 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class TopBuilds {
-	private class Build implements Comparable<Build> {
+	private static final int DEFAULT_SIZE = 20;
+	
+	private static class Build implements Comparable<Build> {
 		private Collection<Constellation> build;
 		private Map<Constellation, Integer> partials;
 		private Double value;
@@ -28,9 +32,25 @@ public class TopBuilds {
 		}
 	}
 	
+	private static TopBuilds instance = new TopBuilds(DEFAULT_SIZE);
+	
+	public static TopBuilds getInstance() {
+		return instance;
+	}
+	
+	public static void reset() {
+		reset(DEFAULT_SIZE);
+	}
+	
+	public static void reset(int maxSize) {
+		instance = new TopBuilds(maxSize);
+	}
+	
+	private final Lock lock;
 	private final List<Build> topBuilds;
 	
-	public TopBuilds(int maxBuilds) {
+	private TopBuilds(int maxBuilds) {
+		lock = new ReentrantLock();
 		topBuilds = new ArrayList<Build>(maxBuilds);
 		
 		for (int i = 0; i < maxBuilds; i++) {
@@ -39,7 +59,10 @@ public class TopBuilds {
 		}
 	}
 	
-	public void submit(Collection<Constellation> build, Map<Constellation, Integer> partials, double value) {
+	public void submit(Collection<Constellation> build,
+			Map<Constellation, Integer> partials, double value) {
+		lock.lock();
+		
 		if (value > topBuilds.get(0).value) {
 			List<Constellation> topBuild = new ArrayList<Constellation>(build);
 			Collections.sort(topBuild, new Comparator<Constellation>() {
@@ -53,13 +76,21 @@ public class TopBuilds {
 					value));
 			Collections.sort(topBuilds);
 		}
+		
+		lock.unlock();
 	}
 	
 	public String buildsString() {
+		// Lock topBuilds for as short a time as possible
+		Build[] snapshot = new Build[topBuilds.size()];
+		lock.lock();
+		topBuilds.toArray(snapshot);
+		lock.unlock();
+		
 		StringBuilder string = new StringBuilder();
 		// Build string in reverse order so highest values are at the top
-		for (int i = topBuilds.size()-1; i >= 0; i--) {
-			string.append(topBuilds.get(i) + "\n");
+		for (int i = snapshot.length-1; i >= 0; i--) {
+			string.append(snapshot[i] + "\n");
 		}
 		return string.toString();
 	}

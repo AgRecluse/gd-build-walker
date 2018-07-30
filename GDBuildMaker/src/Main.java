@@ -11,6 +11,8 @@ public class Main {
 			"C:\\Games\\steamapps\\common\\Grim Dawn\\working";
 	public static final int MAX_STARS = 55;
 	public static final int TOP_BUILDS = 32;
+	public static final int THREADS = 1;
+	public static final int PRINT_TIMER = 3000;
 	
 	public static double constellationValue(Constellation constellation) {
 		Double value = 0.0;
@@ -141,7 +143,33 @@ public class Main {
 					+ constellationValues.get(constellation.getOrdinal()));
 		}
 		
-		BuildWalker bw = new BuildWalker();
-		bw.walkBuilds(sortedConstellations, constellationValues, starValues);
+		BuildWalker.setup(sortedConstellations, constellationValues, starValues);
+		
+		for (int i = 0; i < THREADS; i++) {
+			new Thread() {
+				public void run() {
+					new BuildWalker().walkBuilds();
+				}
+			}.start();
+		}
+		
+		int lastTotalBuilds = 0;
+		while (true) {
+			try {Thread.sleep(PRINT_TIMER);} catch (InterruptedException e) {}
+			
+			int totalBuilds = BuildWalker.totalBuilds();
+			int walkRate = totalBuilds - lastTotalBuilds;
+			int bps = (int)((walkRate)/(PRINT_TIMER/1000.0));
+			
+			StringBuilder builder = new StringBuilder();
+			builder.append("Visited Builds: " + totalBuilds + "\n");
+			builder.append("    New Builds: " + walkRate + "\n");
+			builder.append(" Builds/Second: " + bps + "\n");
+			builder.append(TopBuilds.getInstance().buildsString() + "\n");
+			
+			System.out.println(builder.toString());
+			
+			lastTotalBuilds = totalBuilds;
+		}
 	}
 }

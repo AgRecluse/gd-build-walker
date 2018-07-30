@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BuildFinisher {
 	public final class PartialBuild {
@@ -31,35 +32,34 @@ public class BuildFinisher {
 		private final int starsUsed;
 		private final double avgValue;
 		
-		private PartialConstellation(Constellation c, Star hs, Collection<Star> nh, int su, double av) {
-			constellation = c;
-			headStar = hs;
-			newHeads = nh;
-			starsUsed = su;
-			avgValue = av;
+		private PartialConstellation(Constellation constellation, Star headStar,
+				Collection<Star> newHeads, int starsUsed, double avgValue) {
+			this.constellation = constellation;
+			this.headStar = headStar;
+			this.newHeads = newHeads;
+			this.starsUsed = starsUsed;
+			this.avgValue = avgValue;
 		}
 	}
 	
-	private final List<Constellation> constellations;
-	private final Map<Star, Double> starValues;
-	
-	// Constellations available for selecting stars from
-	private List<Constellation> freeConstellations;
-	
-	// Best average sub-constellation for each free constellation
-	private List<PartialConstellation> partialConstellations;
+	private static List<Constellation> constellations;
+	private static Map<Star, Double> starValues;
 	
 	// Cached values for bestPartialConstellation()
-	private Map<Pair<Star, Integer>, PartialConstellation> cachedPartialConstellations;
+	private static Map<Pair<Star, Integer>, PartialConstellation> cachedPartialConstellations;
 	
-	public BuildFinisher(List<Constellation> constellations, Map<Star, Double> starValues) {
-		this.constellations = constellations;
-		this.starValues = starValues;
-		
-		freeConstellations = new ArrayList<Constellation>();
-		partialConstellations = new ArrayList<PartialConstellation>();
+	public static void setup(List<Constellation> constellations, Map<Star, Double> starValues) {
+		BuildFinisher.constellations = constellations;
+		BuildFinisher.starValues = starValues;
 		cachedPartialConstellations =
-				new HashMap<Pair<Star, Integer>, PartialConstellation>();
+				new ConcurrentHashMap<Pair<Star, Integer>, PartialConstellation>();
+	}
+	
+	// Best average sub-constellations
+	private List<PartialConstellation> partialConstellations;
+	
+	public BuildFinisher() {
+		partialConstellations = new ArrayList<PartialConstellation>();
 	}
 	
 	public PartialBuild bestPartialBuild(Collection<Constellation> build,
@@ -72,19 +72,17 @@ public class BuildFinisher {
 			return new PartialBuild(0.0, new HashMap<Constellation, Integer>());
 		}
 
+		// Get ready for a new run
 		Double totalValue = 0.0;
 		Map<Constellation, Integer> constellationStars = new HashMap<Constellation, Integer>();
-		freeConstellations.clear();
-		for (Constellation c : constellations) {
-			// If the constellation is available and has not been selected for the build
-			if (c.isAvailableWith(buildAffinites) && !(build.contains(c))) {
-				freeConstellations.add(c);
-			}
-		}
-		
 		partialConstellations.clear();
-		for (Constellation c : freeConstellations) {
-			partialConstellations.add(bestPartialConstellation(c, c.headStar(), freeStars));
+		
+		// Make the initial working list of best partials
+		for (Constellation c : constellations) {
+			// If the constellation is available and has not been selected in the build
+			if (c.isAvailableWith(buildAffinites) && !(build.contains(c))) {
+				partialConstellations.add(bestPartialConstellation(c, c.headStar(), freeStars));
+			}
 		}
 		
 		if (partialConstellations.size() <= 0 ) {
