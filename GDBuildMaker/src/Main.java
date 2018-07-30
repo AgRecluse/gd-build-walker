@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class Main {
 	private static final String GD_WORKING_DIRECTORY =
@@ -38,20 +39,42 @@ public class Main {
 		
 		double lifeSteal = star.effect("offensiveLifeLeechMin");
 		
+		double reflection = star.effect("defensiveReflect");
+		
 		double livingShadow = star.effect("Unknown Soldier - Living Shadow");
 		double spearOfHeavens = star.effect("Spear of the Heavens - Spear of the Heavens");
 		double fistOfVire = star.effect("Vire - Fist of Vire");
+		double shieldWall = star.effect("Targo the Builder - Shield Wall");
 		
-		double oaValue = oa + (cunning/2) + (oaMod*30) + (cunningMod*15);
-		double daValue = da + (physique/2) + (daMod*30) + (physiqueMod*15);
+		double oaValue = oa + (cunning/2) + (oaMod*20) + (cunningMod*10);
+		double daValue = da + (physique/2) + (daMod*20) + (physiqueMod*10);
 		
 		double starValue = 0.0;
-		starValue += 100*lifeSteal + 1000*spearOfHeavens + 1000*fistOfVire;
-		starValue += oaValue + daValue;
 		
-		if (constellation.getName().equals("Kraken")) {
-			starValue += 200;
-		}
+		// Retaliation build
+//		Pattern retaliationPattern = Pattern.compile("retaliation");
+//		for (Map.Entry<String, Double> effect : star.getEffects().entrySet()) {
+//			if (retaliationPattern.matcher(effect.getKey().toLowerCase()).find()) {
+//				starValue += effect.getValue();
+//			}
+//		}
+//		starValue += 100*reflection;
+//		starValue += 1000*shieldWall;
+		
+		// 2-handed counter-attacking build
+//		starValue += 100*lifeSteal + 1000*spearOfHeavens + 1000*fistOfVire;
+//		starValue += oaValue + daValue;
+//		
+//		if (constellation.getName().equals("Kraken")) {
+//			starValue += 200;
+//		}
+		
+		// Living Shadow build with OA/DA and life steal
+		starValue += 1000*livingShadow;
+		starValue += 20*lifeSteal;
+		starValue += oaValue + 1.1*daValue;
+		if (constellation.getName().equals("Rhowan's Scepter")) return 0;
+		if (constellation.getName().equals("Hydra")) return 0;
 		
 		return starValue;
 	}
