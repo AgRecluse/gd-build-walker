@@ -1,3 +1,5 @@
+package gdbuildmaker;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,7 +13,7 @@ public class Main {
 			"C:\\Games\\steamapps\\common\\Grim Dawn\\working";
 	public static final int MAX_STARS = 55;
 	public static final int TOP_BUILDS = 32;
-	public static final int THREADS = 1;
+	public static final int THREADS = 2;
 	public static final int PRINT_TIMER = 3000;
 	
 	public static double constellationValue(Constellation constellation) {
@@ -43,10 +45,24 @@ public class Main {
 		
 		double reflection = star.effect("defensiveReflect");
 		
+		double dodge = star.effect("characterDodgePercent");
+		double deflect = star.effect("characterDeflectProjectile");
+		
+		double elementalMod = star.effect("offensiveElementalModifier");
+		double coldMod = star.effect("offensiveColdModifier");
+		double frostburnMod = star.effect("offensiveSlowColdModifier");
+		
+		double vitalityMod = star.effect("offensiveLifeModifier");
+		
 		double livingShadow = star.effect("Unknown Soldier - Living Shadow");
 		double spearOfHeavens = star.effect("Spear of the Heavens - Spear of the Heavens");
 		double fistOfVire = star.effect("Vire - Fist of Vire");
 		double shieldWall = star.effect("Targo the Builder - Shield Wall");
+		double elementalStorm = star.effect("Rhowan's Crown - Elemental Storm");
+		double blizzard = star.effect("Amatok Spirit of Winter - Blizzard");
+		double rumor = star.effect("Murmur - Rumor");
+		double whirlpool = star.effect("Leviathan - Whirlpool");
+		double markOfRattosh = star.effect("Rattosh - Mark of Rattosh");
 		
 		double oaValue = oa + (cunning/2) + (oaMod*20) + (cunningMod*10);
 		double daValue = da + (physique/2) + (daMod*20) + (physiqueMod*10);
@@ -72,11 +88,23 @@ public class Main {
 //		}
 		
 		// Living Shadow build with OA/DA and life steal
-		starValue += 1000*livingShadow;
-		starValue += 20*lifeSteal;
-		starValue += oaValue + 1.1*daValue;
-		if (constellation.getName().equals("Rhowan's Scepter")) return 0;
+//		starValue += 1000*livingShadow;
+//		starValue += 20*lifeSteal;
+//		starValue += oaValue + 1.1*daValue;
+//		if (constellation.getName().equals("Rhowan's Scepter")) return 0;
+//		if (constellation.getName().equals("Hydra")) return 0;
+		
+		// Cold build with dodge chance
+//		starValue += 1000*(elementalStorm + whirlpool + rumor);
+//		starValue += 100*(dodge + deflect);
+//		starValue += elementalMod + coldMod + frostburnMod;
+		
+		// Blood knight build
+		if (constellation.getName().equals("Oklaine's Lantern")) return 0;
 		if (constellation.getName().equals("Hydra")) return 0;
+		starValue += 100000*(markOfRattosh);
+		starValue += 10*(oaValue + daValue);
+		starValue += vitalityMod;
 		
 		return starValue;
 	}
@@ -153,23 +181,29 @@ public class Main {
 			}.start();
 		}
 		
-		int lastTotalBuilds = 0;
 		while (true) {
 			try {Thread.sleep(PRINT_TIMER);} catch (InterruptedException e) {}
-			
-			int totalBuilds = BuildWalker.totalBuilds();
-			int walkRate = totalBuilds - lastTotalBuilds;
-			int bps = (int)((walkRate)/(PRINT_TIMER/1000.0));
-			
-			StringBuilder builder = new StringBuilder();
-			builder.append("Visited Builds: " + totalBuilds + "\n");
-			builder.append("    New Builds: " + walkRate + "\n");
-			builder.append(" Builds/Second: " + bps + "\n");
-			builder.append(TopBuilds.getInstance().buildsString() + "\n");
-			
-			System.out.println(builder.toString());
-			
-			lastTotalBuilds = totalBuilds;
+			report();
 		}
+	}
+	
+	private static int lastTotalBuilds = 0;
+	private static long startTime = System.currentTimeMillis();
+	public static void report() {
+		long runTime = (System.currentTimeMillis()-startTime)/1000;
+		int totalBuilds = BuildWalker.totalBuilds();
+		int walkRate = totalBuilds - lastTotalBuilds;
+		int bps = (int)((walkRate)/(PRINT_TIMER/1000.0));
+		
+		StringBuilder builder = new StringBuilder();
+		builder.append("      Run Time: " + runTime + "\n");
+		builder.append("Visited Builds: " + totalBuilds + "\n");
+		builder.append("    New Builds: " + walkRate + "\n");
+		builder.append(" Builds/Second: " + bps + "\n");
+		builder.append(TopBuilds.getInstance().buildsString() + "\n");
+		
+		System.out.println(builder.toString());
+		
+		lastTotalBuilds = totalBuilds;
 	}
 }

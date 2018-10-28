@@ -1,3 +1,4 @@
+package gdbuildmaker;
 
 public class AffinityValues {
 	private int[] affinityValues;

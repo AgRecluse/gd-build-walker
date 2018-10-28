@@ -1,3 +1,5 @@
+package gdbuildmaker;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -10,7 +12,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BuildWalker {
-	private static final class BuildBytes {
+	private static final class BuildBytes implements Comparable<BuildBytes> {
 		private final byte[] bytes;
 		
 		private BuildBytes(Collection<Constellation> build) {
@@ -29,6 +31,19 @@ public class BuildWalker {
 			if (other == null) {return false; }
 			if (!(other instanceof BuildBytes)) {return false; }
 			return Arrays.equals(bytes, ((BuildBytes)other).bytes);
+		}
+		
+		public int compareTo(BuildWalker.BuildBytes other) {
+			int i = 0;
+			int diff;
+			while (i < bytes.length && i < other.bytes.length) {
+				diff = bytes[i] - other.bytes[i];
+				if (diff != 0) {
+					return diff;
+				}
+				i++;
+			}
+			return bytes.length - other.bytes.length;
 		}
 		
 		public String toString() {

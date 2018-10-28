@@ -1,3 +1,4 @@
+package gdbuildmaker;
 
 public enum Affinity {
 	ASCENDANT,
