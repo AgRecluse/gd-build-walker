@@ -63,6 +63,7 @@ public class BuildWalker {
 	private static List<Constellation> sortedConstellations;
 	private static List<Double> constellationValues;
 	private static Set<BuildBytes> visitedBuilds;
+	private static boolean continueWalking;
 	
 	public static void setup(List<Constellation> sortedConstellations,
 			List<Double> constellationValues, Map<Star, Double> starValues) {
@@ -72,9 +73,15 @@ public class BuildWalker {
 		BuildFinisher.setup(sortedConstellations, starValues);
 		
 		visitedBuilds = ConcurrentHashMap.newKeySet();
+		
+		continueWalking = true;
 	}
 	
-	public static int totalBuilds() {
+	public static void stop() {
+		continueWalking = false;
+	}
+	
+	public static int getBuildsVisited() {
 		return visitedBuilds.size();
 	}
 	
@@ -111,7 +118,7 @@ public class BuildWalker {
 	
 	public void walkBuilds() {
 		pickOptions();
-		while (options.size() > 0 || path.size() > 0) {
+		while ((options.size() > 0 || path.size() > 0) && continueWalking) {
 			
 			// If the options for this step are empty, return to the previous step
 			if (options.size() == 0) {
@@ -218,7 +225,7 @@ public class BuildWalker {
 				if (build.contains(constellation)) {
 					options.add(0, constellation);
 				// If this addition would not put the build over the star limit
-				} else if (buildStars + constellation.numStars() <= Main.MAX_STARS) {
+				} else if (buildStars + constellation.numStars() <= Controller.MAX_STARS) {
 					options.add(constellation);
 				}
 			}

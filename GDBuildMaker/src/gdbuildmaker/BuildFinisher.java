@@ -67,7 +67,7 @@ public class BuildFinisher {
 	public PartialBuild bestPartialBuild(Collection<Constellation> build,
 			int buildStars, AffinityValues buildAffinites) {
 		
-		int freeStars = Main.MAX_STARS - buildStars;
+		int freeStars = Controller.MAX_STARS - buildStars;
 		
 		// If no stars are left to pick, best build has value 0 and no stars
 		if (freeStars <= 0) {
