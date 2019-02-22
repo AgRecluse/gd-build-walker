@@ -10,10 +10,12 @@ import java.util.Map;
 public class Controller {
 
 	public static final int MAX_STARS = 55;
-	public static final int THREADS = 2;
+	public static final int BUILDWALKER_THREADS = 2;
 	
 	private List<Constellation> constellations;
 	private Map<String, Double> effectWeights;
+	
+	private BuildWalker buildWalker;
 	
 	public Controller() {
 		constellations = new ArrayList<Constellation>();
@@ -63,24 +65,18 @@ public class Controller {
 				starValues.put(s, starValue(s, c));
 			}
 		}
-		
-		BuildWalker.setup(sortedConstellations, constellationValues, starValues);
-		
-		for (int i = 0; i < THREADS; i++) {
-			new Thread() {
-				public void run() {
-					new BuildWalker().walkBuilds();
-				}
-			}.start();
-		}
+
+		TopBuilds.reset();
+		buildWalker = new BuildWalker(sortedConstellations, constellationValues, starValues);
+		buildWalker.start(BUILDWALKER_THREADS);
 	}
 	
 	public void stop() {
-		BuildWalker.stop();
+		buildWalker.stop();
 	}
 	
 	public Integer getBuildsVisited() {
-		return BuildWalker.getBuildsVisited();
+		return buildWalker.getBuildsVisited();
 	}
 	
 	public List<Build> getTopBuilds() {
