@@ -20,7 +20,7 @@ public class BuildWalker {
 			bytes = new byte[build.size()];
 			int i = 0;
 			for (Constellation c : build) {
-				bytes[i++] = (byte)(c.getOrdinal() - Byte.MIN_VALUE);
+				bytes[i++] = (byte)(Byte.MIN_VALUE + c.getOrdinal());
 			}
 		}
 		
