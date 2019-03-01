@@ -61,8 +61,6 @@ public final class Constellation {
 	private final AffinityValues reward;
 	private final Map<String, Double> effects;
 	
-	private final int hashCode;
-	
 	public Constellation(Builder builder) {
 		this.name = builder.name;
 		this.ordinal = builder.ordinal;
@@ -81,8 +79,6 @@ public final class Constellation {
 			}
 		}
 		this.effects = Collections.unmodifiableMap(effects);
-		
-		this.hashCode = hashCode();
 	}
 	
 	public String getName() { return this.name; }
@@ -113,9 +109,5 @@ public final class Constellation {
 	
 	public String toString() {
 		return name;
-	}
-	
-	public int hashCode() {
-		return hashCode;
 	}
 }
