@@ -32,6 +32,7 @@ public class Main extends Application {
 	
 	Controller model;
 	TabPane tabPane;
+	Tab loadTab;
 	Tab valueTab;
 	Tab runTab;
 	Thread uiUpdaterThread;
@@ -136,7 +137,6 @@ public class Main extends Application {
 				}
 			} catch (InterruptedException e) {}
 			updateUI();
-			System.out.println("updater done");
 			return null;
 		}
 		
@@ -160,14 +160,16 @@ public class Main extends Application {
 			model = new Controller();
 			effectsList = FXCollections.observableArrayList();
 			
+			loadTab = makeLoadTab();
 			valueTab = makeValueTab();
 			runTab = makeRunTab();
 			
 			tabPane = new TabPane();
+			tabPane.getTabs().add(loadTab);
 			tabPane.getTabs().add(valueTab);
 			tabPane.getTabs().add(runTab);
 			
-			Scene scene = new Scene(tabPane, 400, 400);
+			Scene scene = new Scene(tabPane, 600, 400);
 			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 			primaryStage.setScene(scene);
 			primaryStage.show();
@@ -177,23 +179,73 @@ public class Main extends Application {
 		}
 	}
 	
-	public Tab makeValueTab() {
-		Tab valueTab = new Tab();
-		valueTab.setText("Star Value");
-		valueTab.closableProperty().set(false);
+	public Tab makeLoadTab() {
+		Tab loadTab = new Tab();
+		loadTab.setText("Load Constellations");
+		loadTab.closableProperty().set(false);
 		
-		Text workingDirLabel = new Text();
-		workingDirLabel.setText("Grim Dawn Working Directory");
+		// Setup instructions
+		Text setup1 = new Text("Before beginning, extract the Grim Dawn source files.");
+		Text setup2 = new Text("Complete the Modding Beginner's Guide I, section 1.2.3 Setting Up Asset Manager:");
+		TextField setup3 = new TextField("http://www.grimdawn.com/forums/showpost.php?p=483411&postcount=2");
+		setup3.setEditable(false);
+		VBox setupPane = new VBox(0);
+		setupPane.getChildren().add(setup1);
+		setupPane.getChildren().add(setup2);
+		setupPane.getChildren().add(setup3);
 		
-		TextField workingDirField = new TextField();
-		workingDirField.setText("C:\\Games\\steamapps\\common\\Grim Dawn\\working");
+		// Label and field for showing loaded constellations
+		Text constellationsLabel = new Text("Loaded Constellations");
+		TextArea constellationsField = new TextArea();
+		constellationsField.editableProperty().set(false);
+		VBox constellationsPane = new VBox(0);
+		constellationsPane.getChildren().add(constellationsLabel);
+		constellationsPane.getChildren().add(constellationsField);
+		
+		Text workingDirLabel = new Text("Grim Dawn Working Directory");
+		TextField workingDirField = new TextField("C:\\Games\\steamapps\\common\\Grim Dawn\\working");
 		workingDirField.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent ae) {
 				model.loadConstellations(workingDirField.getText());
 				effectsList.setAll(model.getEffectList());
+				
+				StringBuilder builder = new StringBuilder();
+				for (Constellation c : model.getConstellations()) {
+					builder.append(c.getName() + " ");
+					builder.append("Requires: " + c.getRequirement() + " ");
+					builder.append("Rewards: " + c.getReward() + "\n");
+					int i = 0;
+					for (Star s : c.getStars()) {
+						builder.append("\tStar " + (++i) + ": ");
+						builder.append(s.getEffects().toString() + "\n");
+					}
+					builder.append("\n");
+				}
+				for (String str : model.getLoaderErrors()) {
+					builder.append(str + "\n");
+				}
+				constellationsField.setText(builder.toString());
 			}
 		});
+		VBox workingDirPane = new VBox(0);
+		workingDirPane.getChildren().add(workingDirLabel);
+		workingDirPane.getChildren().add(workingDirField);
+		
+		// Organize everything in a vertical box
+		VBox loadPane = new VBox(8);
+		loadPane.getChildren().add(setupPane);
+		loadPane.getChildren().add(workingDirPane);
+		loadPane.getChildren().add(constellationsPane);
+		
+		loadTab.setContent(loadPane);
+		return loadTab;
+	}
+	
+	public Tab makeValueTab() {
+		Tab valueTab = new Tab();
+		valueTab.setText("Star Value");
+		valueTab.closableProperty().set(false);
 		
 		effectWeights = FXCollections.observableArrayList();
 		
@@ -228,8 +280,6 @@ public class Main extends Application {
 
 		// Organize everything in a vertical box
 		VBox valuePane = new VBox(8);
-		valuePane.getChildren().add(workingDirLabel);
-		valuePane.getChildren().add(workingDirField);
 		valuePane.getChildren().add(buttonBar);
 		valuePane.getChildren().add(effectWeightsView);
 		
@@ -263,8 +313,8 @@ public class Main extends Application {
 		
 		topBuildsField = new TextArea();
 		topBuildsField.editableProperty().set(false);
-		topBuildsField.setText("one\ntwo\nthree\nfour");
 		
+		// organize everything in a vertical box
 		VBox runPane = new VBox(8);
 		runPane.getChildren().add(buildsBar);
 		runPane.getChildren().add(topBuildsField);

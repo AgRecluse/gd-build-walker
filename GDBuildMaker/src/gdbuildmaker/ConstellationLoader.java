@@ -31,17 +31,24 @@ public class ConstellationLoader {
 		private static final Pattern skillFile = Pattern.compile("_skill");
 	}
 	
+	private List<String> errors;
+	
 	public ConstellationLoader() {
-		
+		errors = new ArrayList<String>();
+	}
+	
+	public List<String> getErrors() {
+		return new ArrayList<String>(errors);
 	}
 	
 	public List<Constellation> loadConstellations(String workingDirectory) {
+		errors.clear();
 		List<Constellation> constellations = new ArrayList<Constellation>();
 		
 		for(File baseDirectory : baseDirectories(workingDirectory)) {
 			File constellationDir = new File(baseDirectory, CONSTELLATION_DIR);
 			if(!constellationDir.isDirectory()) {
-				System.out.println("No constellation info in: " + constellationDir.getPath());
+				errors.add("No constellation info in: " + constellationDir.getPath());
 				continue;
 			}
 			
@@ -75,7 +82,7 @@ public class ConstellationLoader {
 		
 		String[] mods = modsDir.list();
 		if(mods == null) {
-			System.out.println("Not a directory: " + modsDir.getPath());
+			errors.add("Mods directory not found at: " + modsDir.getPath());
 			return baseDirs;
 		}
 		
@@ -139,7 +146,7 @@ public class ConstellationLoader {
 				}
 			}
 		} catch(IOException e) {
-			System.out.println("Unable to read file: " + constellationFile.toPath());
+			errors.add("Unable to read constellation file: " + constellationFile.toPath());
 		}
 		
 		// If no stars were found in the file, don't return a builder
@@ -192,7 +199,7 @@ public class ConstellationLoader {
 			}
 			
 		} catch(IOException e) {
-			System.out.println("Unable to read file: " + starUIFile);
+			errors.add("Unable to read star UI file: " + starUIFile);
 			return null;
 		}
 
@@ -222,7 +229,7 @@ public class ConstellationLoader {
 				}
 			}
 		} catch(IOException e) {
-			System.out.println("Unable to read file: " + starUIFile);
+			errors.add("Unable to read star skill file: " + starUIFile);
 			return null;
 		}
 		

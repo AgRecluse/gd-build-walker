@@ -1,10 +1,16 @@
 package gdbuildmaker;
 
+import java.util.Arrays;
+
 public class AffinityValues {
 	private int[] affinityValues;
 	
 	public AffinityValues() {
 		affinityValues = new int[Affinity.values().length];
+	}
+	
+	public String toString() {
+		return Arrays.toString(affinityValues);
 	}
 	
 	public void setValue(Affinity a, int v) {

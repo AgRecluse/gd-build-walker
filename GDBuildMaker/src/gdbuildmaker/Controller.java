@@ -15,6 +15,7 @@ public class Controller {
 	private List<Constellation> constellations;
 	private Map<String, Double> effectWeights;
 	
+	private ConstellationLoader loader;
 	private BuildWalker buildWalker;
 	
 	public Controller() {
@@ -22,8 +23,16 @@ public class Controller {
 	}
 	
 	public void loadConstellations(String dir) {
-		ConstellationLoader loader = new ConstellationLoader();
+		loader = new ConstellationLoader();
 		constellations = loader.loadConstellations(dir);
+	}
+	
+	public List<String> getLoaderErrors() {
+		return loader.getErrors();
+	}
+	
+	public List<Constellation> getConstellations() {
+		return new ArrayList<Constellation>(constellations);
 	}
 	
 	public List<String> getEffectList() {
