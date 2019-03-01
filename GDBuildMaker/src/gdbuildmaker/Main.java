@@ -1,5 +1,6 @@
 package gdbuildmaker;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +10,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -125,29 +125,34 @@ public class Main extends Application {
 		}
 	}
 	
-	private class UIUpdaterTask extends Task<Object> {
+	private class UIUpdaterTask implements Runnable {
 		@Override
-		protected Object call() throws Exception {
+		public void run() {
 			
 			try {
 				while (true) {
-					if (isCancelled()) break;
 					updateUI();
 					Thread.sleep(1000);
 				}
-			} catch (InterruptedException e) {}
-			updateUI();
-			return null;
+			} catch (InterruptedException e) {	
+			} finally {
+				updateUI();
+			}
 		}
+		
+		private List<Build> lastTopBuilds = new ArrayList<Build>();
 		
 		private void updateUI() {
 			buildsVisitedField.setText(model.getBuildsVisited().toString());
 			
-			StringBuilder builder = new StringBuilder();
-			for (Build build : model.getTopBuilds()) {
-				builder.append(build.toString() + "\n");
+			if (!lastTopBuilds.equals(model.getTopBuilds())) {
+				StringBuilder builder = new StringBuilder();
+				for (Build build : model.getTopBuilds()) {
+					builder.append(build.toString() + "\n");
+				}
+				topBuildsField.setText(builder.toString());
+				lastTopBuilds = model.getTopBuilds();
 			}
-			topBuildsField.setText(builder.toString());
 		}
 	}
 	
@@ -172,6 +177,7 @@ public class Main extends Application {
 			Scene scene = new Scene(tabPane, 600, 400);
 			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 			primaryStage.setScene(scene);
+			primaryStage.setTitle("Grim Dawn Devotion Walker");
 			primaryStage.show();
 			
 		} catch(Exception e) {
@@ -324,6 +330,9 @@ public class Main extends Application {
 	}
 	
 	private void handleRunButton() {
+		// Don't do anything if the build walker is already running
+		if (uiUpdaterThread != null) return;
+		
 		Map<String, Double> starValueMap = new HashMap<String, Double>();
 		for (EffectWeight ew : effectWeights) {
 			starValueMap.put(ew.effect, ew.weight);
