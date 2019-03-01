@@ -207,7 +207,7 @@ public class BuildWalker {
 		}
 	}
 	
-	// Shared resources
+	// Resources shared between walker tasks
 	private List<Constellation> sortedConstellations;
 	private List<Double> constellationValues;
 	private Set<BuildBytes> visitedBuilds;
