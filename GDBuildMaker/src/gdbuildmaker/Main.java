@@ -44,7 +44,7 @@ public class Main extends Application {
 	TextArea topBuildsField;
 	
 	private class EffectWeight {
-		public String effect = "none";
+		public String effect = null;
 		public Double weight = 0.0;
 	}
 	
@@ -73,12 +73,12 @@ public class Main extends Application {
 			});
 			
 			// Combo box for setting the bonus type
-			effectComboBox = new ComboBox<String>(effectsList);
+			effectComboBox = new AutocompleteComboBox(effectsList);
+			effectComboBox.setPromptText("effect type");
 			effectComboBox.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent ae) {
-					EffectWeightCell.this.getItem().effect =
-							effectComboBox.getValue();
+					EffectWeightCell.this.getItem().effect = effectComboBox.getValue();
 				}
 			});
 			
@@ -335,7 +335,7 @@ public class Main extends Application {
 		
 		Map<String, Double> starValueMap = new HashMap<String, Double>();
 		for (EffectWeight ew : effectWeights) {
-			starValueMap.put(ew.effect, ew.weight);
+			if (ew.effect != null) starValueMap.put(ew.effect, ew.weight);
 		}
 		
 		model.start(starValueMap);
