@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -69,9 +70,6 @@ public class BuildWalker {
 		double buildValue;
 		AffinityValues buildAffinities;
 		
-		// Options for the next step in the walk
-		Stack<Constellation> options;
-		
 		// The history of choices the walk has taken to get to the current step
 		Stack<Constellation> path;
 		
@@ -86,52 +84,46 @@ public class BuildWalker {
 			buildValue = 0.0;
 			buildAffinities = new AffinityValues();
 			
-			options = new Stack<Constellation>();
 			path = new Stack<Constellation>();
 		}
 		
 		public void run() {
-			pickOptions();
-			while ((options.size() > 0 || path.size() > 0) && continueWalking) {
+			Constellation stepStella = null;
+			do {
+				stepStella = nextConstellation(stepStella);
 				
-				// If the options for this step are empty, return to the previous step
-				if (options.size() == 0) {
-					Constellation popStella = path.pop();
+				// If there is no next valid step, return to the previous step
+				if (stepStella == null) {
+					stepStella = path.pop();
 					
 					// If the popped constellation must be removed
-					if (build.remove(popStella)) {
-						buildStars -= popStella.numStars();
-						buildValue -= constellationValues.get(popStella.getOrdinal());
-						buildAffinities.subtract(popStella.getReward());
+					if (build.remove(stepStella)) {
+						buildStars -= stepStella.numStars();
+						buildValue -= constellationValues.get(stepStella.getOrdinal());
+						buildAffinities.subtract(stepStella.getReward());
 					}
 					// If the popped constellation must be added back on
 					else {
-						build.add(popStella);
-						buildStars += popStella.numStars();
-						buildValue += constellationValues.get(popStella.getOrdinal());
-						buildAffinities.add(popStella.getReward());
+						build.add(stepStella);
+						buildStars += stepStella.numStars();
+						buildValue += constellationValues.get(stepStella.getOrdinal());
+						buildAffinities.add(stepStella.getReward());
 					}
-					
-					// Re-create the options stack for the previous step
-					pickOptions();
-					while (options.peek() != popStella) {options.pop(); }
-					options.pop();
 				}
-				// Else, try proceeding to the next step by selecting the next option
+				// Else, proceed to the next step
 				else {
-					Constellation stepStella = options.pop();
-					
-					// If the selection is a removal
+					// If the next step is a removal
 					if (build.remove(stepStella)) {
 						BuildBytes buildBytes = new BuildBytes(build);
-						buildAffinities.subtract(stepStella.getReward());
-						// If all constellation requirements are still met
-						//  and the new build can be added to the visited builds set
-						if (allAvailable(build, buildAffinities) && visitedBuilds.add(buildBytes)) {
+						
+						// If the new build can be added to the visited builds set
+						if (visitedBuilds.add(buildBytes)) {
 							buildStars -= stepStella.numStars();
 							buildValue -= constellationValues.get(stepStella.getOrdinal());
+							buildAffinities.subtract(stepStella.getReward());
+							
 							path.push(stepStella);
-							pickOptions();
+							stepStella = null;
 							
 							// Find the best use for unspent stars
 							BuildFinisher.PartialBuild partial =
@@ -141,13 +133,12 @@ public class BuildWalker {
 							TopBuilds.getInstance().submit(
 									build, partial.getPartials(), buildValue + partial.getValue());
 						}
-						// If the build is not valid or has been visited, roll back changes
+						// If the build has been visited, roll back changes
 						else {
 							build.add(stepStella);
-							buildAffinities.add(stepStella.getReward());
 						}
 					}
-					// If the selection is an addition
+					// If the next step is an addition
 					else {
 						build.add(stepStella);
 						BuildBytes buildBytes = new BuildBytes(build);
@@ -157,8 +148,9 @@ public class BuildWalker {
 							buildStars += stepStella.numStars();
 							buildValue += constellationValues.get(stepStella.getOrdinal());
 							buildAffinities.add(stepStella.getReward());
+							
 							path.push(stepStella);
-							pickOptions();
+							stepStella = null;
 							
 							// Find the best use for unspent stars
 							BuildFinisher.PartialBuild partial =
@@ -174,36 +166,69 @@ public class BuildWalker {
 						}
 					}
 				}
-			}
+			} while (path.size() > 0 && continueWalking);
 		}
 		
-		/**
-		 * Populates an options stack with an ordered list of valid constellation
-		 *  selections for the next step in the walk. Removals are on the bottom
-		 *  of the options stack, with lowest value removals on top. Additions are
-		 *  on top of the options stack, with highest value additions on top.
-		 * WARNING: For removals, pickOptions() does NOT check if the resulting
-		 *  build will be valid.
-		 * Uses: sortedConstellations
-		 */
-		private void pickOptions() {
-			options.clear();
-
-			/*
-			 * Constellations are sorted from low to high value. To get the desired
-			 * order, add removals to the bottom, and add additions to the top.
-			 */
-			for (Constellation constellation : sortedConstellations) {
-				if (constellation.isAvailableWith(buildAffinities)) {
-					// If this selection would be a removal
-					if (build.contains(constellation)) {
-						options.add(0, constellation);
-					// If this addition would not put the build over the star limit
-					} else if (buildStars + constellation.numStars() <= Controller.MAX_STARS) {
-						options.add(constellation);
+		private Constellation nextConstellation(Constellation prevStella) {
+			// If there was no previous constellation, pick the very first valid option
+			boolean chooseNext = prevStella == null ? true : false;
+			
+			// If prevStella is not in the build, look for additions
+			if (chooseNext || !build.contains(prevStella)) {
+				for (Constellation c : sortedConstellations) {
+					// If prevConstellation has already been found
+					//  If this constellation would fit within the star limit
+					//  If this constellation is not in the build yet
+					if (chooseNext) {
+						if (buildStars + c.numStars() <= Controller.MAX_STARS
+								&& !build.contains(c)) {
+							return c;
+						}
+					}
+					// If this constellation is prevConstellation
+					else if (c == prevStella) {
+						// look for and return the next valid constellation
+						chooseNext = true;
 					}
 				}
 			}
+			
+			/* 
+			 * If prevConstellation was in the build or no valid additions were
+			 * found, look for removals. Search for removals in reverse order
+			 * so that lowest value constellations are offered first.
+			 */
+			ListIterator<Constellation> itr =
+					sortedConstellations.listIterator(sortedConstellations.size());
+			Constellation c;
+			while (itr.hasPrevious()) {
+				c = itr.previous();
+				
+				// If prevConstellation has already been found
+				//  If this constellation is already in the build
+				//  If this removal would leave the build in a valid state
+				if (chooseNext) {
+					if (build.contains(c) && isValidRemoval(c)) {
+						return c;
+					}
+				}
+				else if (c == prevStella) {
+					chooseNext = true;
+				}
+			}
+			
+			// There are no valid options left after prevConstellation
+			return null;
+		}
+		
+		/*
+		 * Returns true if the constellation can be removed from the current
+		 * build while leaving enough affinity for every other constellation in
+		 * the build. Returns false otherwise.
+		 */
+		private boolean isValidRemoval(Constellation c) {
+			AffinityValues aff = buildAffinities.minus(c.getReward());
+			return allAvailable(build, aff);
 		}
 	}
 	
