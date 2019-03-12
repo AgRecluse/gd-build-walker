@@ -41,6 +41,7 @@ public class Main extends Application {
 	ObservableList<EffectWeight> effectWeights;
 	
 	TextField buildsVisitedField;
+	TextField buildsPerSecondField;
 	TextArea topBuildsField;
 	
 	private class EffectWeight {
@@ -134,16 +135,27 @@ public class Main extends Application {
 					updateUI();
 					Thread.sleep(1000);
 				}
-			} catch (InterruptedException e) {	
+			} catch (InterruptedException e) {
+			} catch (NullPointerException e) {
+				System.out.print(e.getStackTrace());
 			} finally {
-				updateUI();
+				try {
+					updateUI();
+				} catch (NullPointerException e) {
+					System.out.print(e.getStackTrace());
+				}
 			}
 		}
 		
 		private List<Build> lastTopBuilds = new ArrayList<Build>();
-		
+		private int lastBuildsVisited = 0;
 		private void updateUI() {
-			buildsVisitedField.setText(model.getBuildsVisited().toString());
+			// Take a snapshot of builds visited, as it changes rapidly
+			int newBuildsVisited = model.getBuildsVisited();
+			buildsVisitedField.setText(Integer.toString(newBuildsVisited));
+			buildsPerSecondField.setText(
+					Integer.toString(newBuildsVisited-lastBuildsVisited));
+			lastBuildsVisited = newBuildsVisited;
 			
 			if (!lastTopBuilds.equals(model.getTopBuilds())) {
 				StringBuilder builder = new StringBuilder();
@@ -299,9 +311,12 @@ public class Main extends Application {
 		runTab.setClosable(false);
 		
 		Text buildsVisitedLabel = new Text("Builds Visited:");
-		
 		buildsVisitedField = new TextField();
 		buildsVisitedField.editableProperty().set(false);
+		
+		Text buildsPerSecondLabel = new Text("Builds/sec:");
+		buildsPerSecondField = new TextField();
+		buildsPerSecondField.editableProperty().set(false);
 		
 		Button stopButton = new Button();
 		stopButton.setText("Stop Run");
@@ -315,6 +330,8 @@ public class Main extends Application {
 		HBox buildsBar = new HBox(8);
 		buildsBar.getChildren().add(buildsVisitedLabel);
 		buildsBar.getChildren().add(buildsVisitedField);
+		buildsBar.getChildren().add(buildsPerSecondLabel);
+		buildsBar.getChildren().add(buildsPerSecondField);
 		buildsBar.getChildren().add(stopButton);
 		
 		topBuildsField = new TextArea();
