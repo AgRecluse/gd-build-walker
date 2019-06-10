@@ -207,10 +207,11 @@ public class Main extends Application {
 		loadTab.closableProperty().set(false);
 		
 		// Setup instructions
-		Text setup1 = new Text("Before beginning, extract the Grim Dawn source files.");
+		Text setup1 = new Text("First time setup: extract the Grim Dawn source files.");
 		Text setup2 = new Text("Complete the Modding Beginner's Guide I, section 1.2.3 Setting Up Asset Manager:");
-		TextField setup3 = new TextField("http://www.grimdawn.com/forums/showpost.php?p=483411&postcount=2");
+		TextField setup3 = new TextField("https://forums.crateentertainment.com/t/script-basics-modding-beginners-guide-i/37525/2");
 		setup3.setEditable(false);
+		
 		VBox setupPane = new VBox(0);
 		setupPane.getChildren().add(setup1);
 		setupPane.getChildren().add(setup2);
