@@ -33,40 +33,42 @@ public class Main extends Application {
 	Controller model;
 	TabPane tabPane;
 	Tab loadTab;
+	Tab characterTab;
 	Tab valueTab;
 	Tab runTab;
 	Thread uiUpdaterThread;
 	
 	ObservableList<String> effectsList;
-	ObservableList<EffectWeight> effectWeights;
+	ObservableList<NameValuePair> effectWeights;
+	ObservableList<NameValuePair> characterAttributeValues;
 	
 	TextField buildsVisitedField;
 	TextField buildsPerSecondField;
 	TextArea topBuildsField;
 	
-	private class EffectWeight {
-		public String effect = null;
-		public Double weight = 0.0;
+	private class NameValuePair {
+		public String name = null;
+		public Double value = 0.0;
 	}
 	
-	private class EffectWeightCell extends ListCell<EffectWeight> {
+	private class EffectValueCell extends ListCell<NameValuePair> {
 		private HBox cellPane;
-		private TextField weightField;
+		private TextField valueField;
 		private ComboBox<String> effectComboBox;
 		
-		public EffectWeightCell() {
+		public EffectValueCell() {
 			// Text field for setting the value
-			weightField = new TextField();
-			// Update weight on focus change
-			weightField.focusedProperty().addListener(new ChangeListener<Boolean>() {
+			valueField = new TextField();
+			// Update value on focus change
+			valueField.focusedProperty().addListener(new ChangeListener<Boolean>() {
 				@Override
 				public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-					// If the text field had focus, save the weight
+					// If the text field had focus, save the value
 					if (oldValue) saveWeight();
 				}
 			});
-			// Update weight when Enter is pressed
-			weightField.setOnAction(new EventHandler<ActionEvent>() {
+			// Update value when Enter is pressed
+			valueField.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent ae) {
 					saveWeight();
@@ -79,7 +81,7 @@ public class Main extends Application {
 			effectComboBox.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent ae) {
-					EffectWeightCell.this.getItem().effect = effectComboBox.getValue();
+					EffectValueCell.this.getItem().name = effectComboBox.getValue();
 				}
 			});
 			
@@ -89,13 +91,13 @@ public class Main extends Application {
 			deleteButton.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent ae) {
-					EffectWeightCell.this.getListView().getItems().remove(
-							EffectWeightCell.this.getItem());
+					EffectValueCell.this.getListView().getItems().remove(
+							EffectValueCell.this.getItem());
 				}
 			});
 
 			cellPane = new HBox(8);
-			cellPane.getChildren().add(weightField);
+			cellPane.getChildren().add(valueField);
 			cellPane.getChildren().add(effectComboBox);
 			cellPane.getChildren().add(deleteButton);
 		}
@@ -107,21 +109,21 @@ public class Main extends Application {
 		 */
 		private void saveWeight() {
 			try {
-				getItem().weight = Double.parseDouble(weightField.getText());
+				getItem().value = Double.parseDouble(valueField.getText());
 			} catch (NumberFormatException e) {}
-			weightField.setText(String.valueOf(getItem().weight));
+			valueField.setText(String.valueOf(getItem().value));
 		}
 		
 		@Override
-		protected void updateItem(EffectWeight bv, boolean empty) {
+		protected void updateItem(NameValuePair bv, boolean empty) {
 			super.updateItem(bv, empty);
 			
 			if (empty) {
 				this.setGraphic(null);
 			} else {
 				this.setGraphic(cellPane);
-				weightField.setText(bv.weight.toString());
-				effectComboBox.setValue(bv.effect);
+				valueField.setText(bv.value.toString());
+				effectComboBox.setValue(bv.name);
 			}
 		}
 	}
@@ -178,11 +180,13 @@ public class Main extends Application {
 			effectsList = FXCollections.observableArrayList();
 			
 			loadTab = makeLoadTab();
+			characterTab = makeCharacterTab();
 			valueTab = makeValueTab();
 			runTab = makeRunTab();
 			
 			tabPane = new TabPane();
 			tabPane.getTabs().add(loadTab);
+			tabPane.getTabs().add(characterTab);
 			tabPane.getTabs().add(valueTab);
 			tabPane.getTabs().add(runTab);
 			
@@ -260,6 +264,39 @@ public class Main extends Application {
 		return loadTab;
 	}
 	
+	public Tab makeCharacterTab() {
+		Tab characterTab = new Tab();
+		characterTab.setText("Character");
+		characterTab.closableProperty().set(false);
+		
+		characterAttributeValues = FXCollections.observableArrayList();
+		
+		ListView<NameValuePair> characterEffectsView = new ListView<NameValuePair>();
+		characterEffectsView.setItems(characterAttributeValues);
+		characterEffectsView.setCellFactory(new Callback<ListView<NameValuePair>, ListCell<NameValuePair>>() {
+			@Override public ListCell<NameValuePair> call(ListView<NameValuePair> list) {
+				return new EffectValueCell();
+			}
+		});
+		
+		Button newAttributeButton = new Button();
+		newAttributeButton.setText("New Attribute");
+		newAttributeButton.setOnAction(new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent ae) {
+				characterAttributeValues.add(new NameValuePair());
+			}
+		});
+		
+		// Organize everything in a vertical box
+		VBox characterPane = new VBox(8);
+		characterPane.getChildren().add(newAttributeButton);
+		characterPane.getChildren().add(characterEffectsView);
+		
+		characterTab.setContent(characterPane);
+		
+		return characterTab;
+	}
+	
 	public Tab makeValueTab() {
 		Tab valueTab = new Tab();
 		valueTab.setText("Star Value");
@@ -267,11 +304,11 @@ public class Main extends Application {
 		
 		effectWeights = FXCollections.observableArrayList();
 		
-		ListView<EffectWeight> effectWeightsView = new ListView<EffectWeight>();
+		ListView<NameValuePair> effectWeightsView = new ListView<NameValuePair>();
 		effectWeightsView.setItems(effectWeights);
-		effectWeightsView.setCellFactory(new Callback<ListView<EffectWeight>, ListCell<EffectWeight>>() {
-			@Override public ListCell<EffectWeight> call(ListView<EffectWeight> list) {
-				return new EffectWeightCell();
+		effectWeightsView.setCellFactory(new Callback<ListView<NameValuePair>, ListCell<NameValuePair>>() {
+			@Override public ListCell<NameValuePair> call(ListView<NameValuePair> list) {
+				return new EffectValueCell();
 			}
 		});
 		
@@ -281,7 +318,7 @@ public class Main extends Application {
 		valueButton.setText("New Value");
 		valueButton.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent ae) {
-				effectWeights.add(new EffectWeight());
+				effectWeights.add(new NameValuePair());
 			}
 		});
 		
@@ -351,8 +388,8 @@ public class Main extends Application {
 		if (uiUpdaterThread != null) return;
 		
 		Map<String, Double> starValueMap = new HashMap<String, Double>();
-		for (EffectWeight ew : effectWeights) {
-			if (ew.effect != null) starValueMap.put(ew.effect, ew.weight);
+		for (NameValuePair ew : effectWeights) {
+			if (ew.name != null) starValueMap.put(ew.name, ew.value);
 		}
 		
 		model.start(starValueMap);
