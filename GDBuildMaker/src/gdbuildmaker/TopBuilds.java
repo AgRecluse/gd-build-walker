@@ -13,24 +13,20 @@ import java.util.concurrent.locks.ReentrantLock;
 public class TopBuilds {
 	private static final int DEFAULT_SIZE = 100;
 	
-	private static TopBuilds instance = new TopBuilds(DEFAULT_SIZE);
-	
-	public static TopBuilds getInstance() {
-		return instance;
-	}
-	
-	public static void reset() {
+	public void reset() {
 		reset(DEFAULT_SIZE);
 	}
 	
-	public static void reset(int maxSize) {
-		instance = new TopBuilds(maxSize);
+	public void reset(int maxSize) {
+		topBuilds.clear();
 	}
 	
 	private final Lock lock;
 	private final List<Build> topBuilds;
 	
-	private TopBuilds(int maxBuilds) {
+	public TopBuilds() { this(DEFAULT_SIZE); }
+	
+	public TopBuilds(int maxBuilds) {
 		lock = new ReentrantLock();
 		topBuilds = new ArrayList<Build>(maxBuilds);
 		

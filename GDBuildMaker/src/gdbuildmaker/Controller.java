@@ -2,7 +2,6 @@ package gdbuildmaker;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,10 +12,10 @@ public class Controller {
 	public static final int BUILDWALKER_THREADS = 2;
 	
 	private List<Constellation> constellations;
-	private Map<String, Double> effectWeights;
 	
 	private ConstellationLoader loader;
 	private BuildWalker buildWalker;
+	private TopBuilds topBuilds;
 	
 	public Controller() {
 		constellations = new ArrayList<Constellation>();
@@ -51,32 +50,21 @@ public class Controller {
 	}
 
 	public void start(Map<String, Double> effectWeights) {
-		this.effectWeights = effectWeights;
-		
-		final List<Double> constellationValues =
-				new ArrayList<Double>(constellations.size());
-		for (Constellation constellation : constellations) {
-			constellationValues.add(constellationValue(constellation));
+		final Map<Constellation, Double> constellationValues =
+				new HashMap<Constellation, Double>();
+		for (Constellation c : constellations) {
+			constellationValues.put(c, constellationValue(c, effectWeights));
 		}
-		
-		final List<Constellation> sortedConstellations =
-				new ArrayList<Constellation>(constellations);
-		Collections.sort(sortedConstellations, new Comparator<Constellation>() {
-			public int compare(Constellation c1, Constellation c2) {
-				return constellationValues.get(c1.getOrdinal())
-						.compareTo(constellationValues.get(c2.getOrdinal()));
-			}
-		});
 		
 		final Map<Star, Double> starValues = new HashMap<Star, Double>();
 		for (Constellation c : constellations) {
 			for (Star s : c.getStars()) {
-				starValues.put(s, starValue(s, c));
+				starValues.put(s, starValue(s, effectWeights));
 			}
 		}
 
-		TopBuilds.reset();
-		buildWalker = new BuildWalker(sortedConstellations, constellationValues, starValues);
+		topBuilds = new TopBuilds();
+		buildWalker = new BuildWalker(constellationValues, starValues, topBuilds);
 		buildWalker.start(BUILDWALKER_THREADS);
 	}
 	
@@ -89,10 +77,10 @@ public class Controller {
 	}
 	
 	public List<Build> getTopBuilds() {
-		return TopBuilds.getInstance().getBuilds();
+		return topBuilds.getBuilds();
 	}
 	
-	private Double starValue(Star star, Constellation constellation) {
+	private Double starValue(Star star, Map<String, Double> effectWeights) {
 		double value = 0.0;
 		
 		for (String effect : effectWeights.keySet()) {
@@ -102,11 +90,11 @@ public class Controller {
 		return value;
 	}
 	
-	private Double constellationValue(Constellation constellation) {
+	private Double constellationValue(Constellation constellation, Map<String, Double> effectWeights) {
 		double value = 0.0;
 		
 		for (Star star : constellation.getStars()) {
-			value += starValue(star, constellation);
+			value += starValue(star, effectWeights);
 		}
 		
 		return value;

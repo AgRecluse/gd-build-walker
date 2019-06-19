@@ -9,7 +9,30 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BuildFinisher {
-	public final class PartialBuild {
+	public static class Builder {
+		/*
+		 * Data is shared between instances of BuildFinisher created from the same builder
+		 */
+		
+		private final Map<Pair<Star, Integer>, PartialConstellation> cachedPartialConstellations;
+		
+		private final List<Constellation> constellations;
+		private final Map<Star, Double> starValues;
+		
+		public Builder(List<Constellation> constellations, Map<Star, Double> starValues) {
+			this.constellations = constellations;
+			this.starValues = starValues;
+			
+			cachedPartialConstellations =
+					new ConcurrentHashMap<Pair<Star, Integer>, PartialConstellation>();
+		}
+		
+		public BuildFinisher build() {
+			return new BuildFinisher(this);
+		}
+	}
+	
+	public class PartialBuild {
 		private final Double value;
 		private final Map<Constellation, Integer> partials;
 		
@@ -44,23 +67,20 @@ public class BuildFinisher {
 		}
 	}
 	
-	private static List<Constellation> constellations;
-	private static Map<Star, Double> starValues;
+	private final List<Constellation> constellations;
+	private final Map<Star, Double> starValues;
 	
 	// Cached values for bestPartialConstellation()
-	private static Map<Pair<Star, Integer>, PartialConstellation> cachedPartialConstellations;
+	private final Map<Pair<Star, Integer>, PartialConstellation> cachedPartialConstellations;
 	
-	public static void setup(List<Constellation> constellations, Map<Star, Double> starValues) {
-		BuildFinisher.constellations = constellations;
-		BuildFinisher.starValues = starValues;
-		cachedPartialConstellations =
-				new ConcurrentHashMap<Pair<Star, Integer>, PartialConstellation>();
-	}
-	
-	// Best average sub-constellations
+	// Best average sub-constellations, for use in bestParialBuild()
 	private List<PartialConstellation> partialConstellations;
 	
-	public BuildFinisher() {
+	private BuildFinisher(Builder builder) {
+		this.constellations = builder.constellations;
+		this.starValues = builder.starValues;
+		this.cachedPartialConstellations = builder.cachedPartialConstellations;
+		
 		partialConstellations = new ArrayList<PartialConstellation>();
 	}
 	

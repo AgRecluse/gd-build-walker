@@ -3,6 +3,7 @@ package gdbuildmaker;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -61,8 +62,6 @@ public class BuildWalker {
 	}
 	
 	private class Walker implements Runnable {
-		BuildFinisher buildFinisher;
-		
 		// Build variables represent the state of the build at each step in the walk
 		SortedSet<Constellation> build;
 		int buildStars;
@@ -75,8 +74,9 @@ public class BuildWalker {
 		// The history of choices the walk has taken to get to the current step
 		Stack<Constellation> path;
 		
+		BuildFinisher buildFinisher;
+		
 		public Walker() {
-			buildFinisher = new BuildFinisher();
 			build = new TreeSet<Constellation>(new Comparator<Constellation>() {
 					public int compare(Constellation c1, Constellation c2) {
 						return c1.getOrdinal() - c2.getOrdinal();
@@ -88,6 +88,8 @@ public class BuildWalker {
 			
 			options = new Stack<Constellation>();
 			path = new Stack<Constellation>();
+			
+			buildFinisher = bfBuilder.build();
 		}
 		
 		public void run() {
@@ -101,14 +103,14 @@ public class BuildWalker {
 					// If the popped constellation must be removed
 					if (build.remove(popStella)) {
 						buildStars -= popStella.numStars();
-						buildValue -= constellationValues.get(popStella.getOrdinal());
+						buildValue -= cValues[popStella.getOrdinal()];
 						buildAffinities.subtract(popStella.getReward());
 					}
 					// If the popped constellation must be added back on
 					else {
 						build.add(popStella);
 						buildStars += popStella.numStars();
-						buildValue += constellationValues.get(popStella.getOrdinal());
+						buildValue += cValues[popStella.getOrdinal()];
 						buildAffinities.add(popStella.getReward());
 					}
 					
@@ -129,7 +131,7 @@ public class BuildWalker {
 						//  and the new build can be added to the visited builds set
 						if (allAvailable(build, buildAffinities) && visitedBuilds.add(buildBytes)) {
 							buildStars -= stepStella.numStars();
-							buildValue -= constellationValues.get(stepStella.getOrdinal());
+							buildValue -= cValues[stepStella.getOrdinal()];
 							path.push(stepStella);
 							pickOptions();
 							
@@ -138,7 +140,7 @@ public class BuildWalker {
 									buildFinisher.bestPartialBuild(build, buildStars, buildAffinities);
 							
 							// Give the finished build to TopBuilds
-							TopBuilds.getInstance().submit(
+							topBuilds.submit(
 									build, partial.getPartials(), buildValue + partial.getValue());
 						}
 						// If the build is not valid or has been visited, roll back changes
@@ -155,7 +157,7 @@ public class BuildWalker {
 						// If the new build can be added to the visited builds set
 						if (visitedBuilds.add(buildBytes)) {
 							buildStars += stepStella.numStars();
-							buildValue += constellationValues.get(stepStella.getOrdinal());
+							buildValue += cValues[stepStella.getOrdinal()];
 							buildAffinities.add(stepStella.getReward());
 							path.push(stepStella);
 							pickOptions();
@@ -165,7 +167,7 @@ public class BuildWalker {
 									buildFinisher.bestPartialBuild(build, buildStars, buildAffinities);
 							
 							// Give the finished build to TopBuilds
-							TopBuilds.getInstance().submit(
+							topBuilds.submit(
 									build, partial.getPartials(), buildValue + partial.getValue());
 						}
 						// If the build has been visited, roll back changes
@@ -208,24 +210,37 @@ public class BuildWalker {
 	}
 	
 	// Resources shared between walker tasks
-	private List<Constellation> sortedConstellations;
-	private List<Double> constellationValues;
-	private Set<BuildBytes> visitedBuilds;
+	private final List<Constellation> sortedConstellations;
+	private final double[] cValues; // constellation values by constellation ordinal
+	private final Set<BuildBytes> visitedBuilds;
+	private final BuildFinisher.Builder bfBuilder;
+	private final TopBuilds topBuilds;
+	
 	private boolean continueWalking = false;
 	
 	private List<Thread> activeThreads;
 	
-	public BuildWalker(List<Constellation> sortedConstellations,
-			List<Double> constellationValues, Map<Star, Double> starValues) {
-		this.sortedConstellations = sortedConstellations;
-		this.constellationValues = constellationValues;
+	public BuildWalker(Map<Constellation, Double> constellationValues,
+			Map<Star, Double> starValues, TopBuilds topBuilds) {
+		sortedConstellations = new ArrayList<Constellation>(constellationValues.keySet());
+		Collections.sort(sortedConstellations, new Comparator<Constellation>() {
+			public int compare(Constellation c1, Constellation c2) {
+				return constellationValues.get(c1).compareTo(constellationValues.get(c2));
+			}
+		});
 		
-		BuildFinisher.setup(sortedConstellations, starValues);
+		cValues = new double[sortedConstellations.size()];
+		for (Constellation c : sortedConstellations) {
+			cValues[c.getOrdinal()] = constellationValues.get(c);
+		}
 		
 		visitedBuilds = ConcurrentHashMap.newKeySet();
 		
-		continueWalking = true;
+
+		bfBuilder = new BuildFinisher.Builder(sortedConstellations, starValues);
+		this.topBuilds = topBuilds;
 		
+		continueWalking = true;
 		activeThreads = new ArrayList<Thread>();
 	}
 	
