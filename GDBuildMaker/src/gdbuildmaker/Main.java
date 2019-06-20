@@ -1,5 +1,10 @@
 package gdbuildmaker;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,10 +30,14 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
 public class Main extends Application {
+	
+	Stage primaryStage;
+	FileChooser fileChooser;
 	
 	Controller model;
 	TabPane tabPane;
@@ -174,6 +183,11 @@ public class Main extends Application {
 	
 	public void start(Stage primaryStage) {
 		try {
+			this.primaryStage = primaryStage;
+			fileChooser = new FileChooser();
+			fileChooser.getExtensionFilters().add(
+					new FileChooser.ExtensionFilter("CSV Files (*.csv)", "*.csv"));
+			
 			model = new Controller();
 			effectsList = FXCollections.observableArrayList();
 			
@@ -276,12 +290,29 @@ public class Main extends Application {
 		});
 		
 		BorderPane buttonBar = new BorderPane();
+		HBox buttonBarLeft = new HBox(4);
 		
 		Button valueButton = new Button();
 		valueButton.setText("New Value");
 		valueButton.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent ae) {
 				effectWeights.add(new EffectWeight());
+			}
+		});
+		
+		Button loadButton = new Button();
+		loadButton.setText("Load");
+		loadButton.setOnAction(new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent ae) {
+				handleLoadButton();
+			}
+		});
+		
+		Button saveButton = new Button();
+		saveButton.setText("Save");
+		saveButton.setOnAction(new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent ae) {
+				handleSaveButton();
 			}
 		});
 		
@@ -293,7 +324,10 @@ public class Main extends Application {
 			}
 		});
 		
-		buttonBar.setLeft(valueButton);
+		buttonBarLeft.getChildren().add(valueButton);
+		buttonBarLeft.getChildren().add(loadButton);
+		buttonBarLeft.getChildren().add(saveButton);
+		buttonBar.setLeft(buttonBarLeft);
 		buttonBar.setRight(runButton);
 
 		// Organize everything in a vertical box
@@ -375,6 +409,44 @@ public class Main extends Application {
 		} catch (InterruptedException e) {}
 
 		uiUpdaterThread = null;
+	}
+	
+	private void handleSaveButton() {
+		// Show save file dialog
+		File file = fileChooser.showSaveDialog(primaryStage);
+		
+		if (file != null) {
+			try {
+				PrintWriter writer = new PrintWriter(file);
+
+				// Write each effect/weight pair with a comma separator
+				for (EffectWeight ew : effectWeights) {
+					writer.println(ew.effect + "," + ew.weight);
+				}
+				
+				writer.close();
+			} catch (IOException e) {}
+		}
+	}
+	
+	private void handleLoadButton() {
+		// Show open file dialog
+		File file = fileChooser.showOpenDialog(primaryStage);
+		
+		if (file != null) {
+			try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					try {
+						String[] split = line.split(",");
+						EffectWeight ew = new EffectWeight();
+						ew.effect = split[0];
+						ew.weight = Double.parseDouble(split[1]);
+						effectWeights.add(ew);
+					} catch (NumberFormatException e) {}
+				}
+			} catch (IOException e) {}
+		}
 	}
 	
 	public static void printConstellations(Iterable<Constellation> constellations2) {
